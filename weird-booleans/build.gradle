@@ -1,0 +1,46 @@
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    // For running the class writer in meta-weird-booleans
+    meta
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    meta project(':meta-weird-booleans')
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+TaskProvider<JavaExec> writeClasses = tasks.register("writeClasses", JavaExec.class) {
+    classpath configurations.meta
+    mainClass.set("com.github.alexlandau.weirdbool.meta.WriteWeirdBooleans")
+    args file("build/writtenClasses/com/github/alexlandau/weirdbool/WeirdBooleans.class").absolutePath
+}
+
+tasks.named("compileJava").configure {
+    dependsOn writeClasses
+    inputs.dir(file('build/writtenClasses'))
+    doLast {
+        project.copy {
+            from file('build/writtenClasses')
+            into file('build/classes/java/main')
+        }
+    }
+}
